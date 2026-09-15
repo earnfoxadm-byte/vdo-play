@@ -1,39 +1,61 @@
-module.exports = async (req, res) => {
-  // Set CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export default async function handler(req, res) {
+    // CORS Permission allow kora
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-  }
+    const { url } = req.query;
 
-  const { link } = req.body || {};
+    if (!url) {
+        return res.status(400).json({ status: 'error', message: 'Link paste korun!' });
+    }
 
-  if (!link) {
-    return res.status(400).json({ success: false, message: 'Link is required' });
-  }
+    try {
+        // Step 1: URL theke short_code ber kora
+        const cleanUrl = url.trim().replace(/\/$/, ""); 
+        const shortCode = cleanUrl.substring(cleanUrl.lastIndexOf('/') + 1);
 
-  try {
-    // ১. vplayer API-তে POST Request পাঠানো
-    const response = await fetch('https://vplayer.in/api/vplayer/android/file1.php', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        'Accept': 'application/json',
-        'Host': 'vplayer.in'
-      },
-      body: JSON.stringify({ link: link })
-    });
+        if (!shortCode) {
+            return res.status(400).json({ status: 'error', message: 'Invalid URL' });
+        }
 
-    const data = await response.json();
+        // Step 2: VPlayer API Call
+        const apiKey = "6f9a45a2901e0e83686415cd9365a3889c7a03a847546051aed4afc73f23af77";
+        const apiUrl = `https://vplayer.in/api/track_api.php?action=track&short_code=${shortCode}&api_key=${apiKey}`;
 
-    // ২. লিঙ্ক রেসপন্স চেক করা
+        const apiResponse = await fetch(apiUrl);
+        const data = await apiResponse.json();
+
+        // Step 3: Response Process kora
+        if (data.status === "success" && data.data && data.data.direct_video_url) {
+            const directVideoUrl = data.data.direct_video_url;
+            
+            // File Name extract kora (e.g. zDtiZdEid_720p_1788192799.mp4)
+            const fileName = directVideoUrl.substring(directVideoUrl.lastIndexOf('/') + 1);
+
+            // Worker link toiri kora
+            const finalVideoUrl = `https://disk.alicebearman6.workers.dev/video/${fileName}`;
+
+            return res.status(200).json({
+                status: 'success',
+                title: data.data.title || fileName,
+                videoUrl: finalVideoUrl
+            });
+        } else {
+            return res.status(400).json({ 
+                status: 'error', 
+                message: data.message || 'Video direct link paowa jayni' 
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
+}
     if (data && data.link) {
       // https://f0518.backblazeb2.com/file/teraboxvideo/45639-2_480p_1788380508.mp4
       // লিঙ্ক থেকে শুধুমাত্র ফাইলের নাম এক্সট্র্যাক্ট করা (45639-2_480p_1788380508.mp4)
