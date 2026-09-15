@@ -40,6 +40,30 @@
         });
 
         const data = await res.json();
+        
+        if (res.ok && data.success) {
+          player.source = {
+            type: 'video',
+            sources: [{ src: data.stream_url, type: 'video/mp4' }]
+          };
+          player.play();
+        } else {
+          alert('Error: ' + (data.message || 'Unable to parse link'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Fetch Error: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ link })
+        });
+
+        const data = await res.json();
         if(data.success) {
           player.source = {
             type: 'video',
