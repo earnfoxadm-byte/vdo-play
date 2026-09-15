@@ -1,39 +1,66 @@
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  // Set CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+  }
+
+  const { link } = req.body || {};
+
+  if (!link) {
+    return res.status(400).json({ success: false, message: 'Link is required' });
   }
 
   try {
-    const { link } = req.body || {};
+    // ১. vplayer API-তে POST Request পাঠানো
+    const response = await fetch('https://vplayer.in/api/vplayer/android/file1.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'Accept': 'application/json',
+        'Host': 'vplayer.in'
+      },
+      body: JSON.stringify({ link: link })
+    });
 
-    if (!link) {
-      return res.status(400).json({ success: false, message: 'Link missing' });
+    const data = await response.json();
+
+    // ২. লিঙ্ক রেসপন্স চেক করা
+    if (data && data.link) {
+      // https://f0518.backblazeb2.com/file/teraboxvideo/45639-2_480p_1788380508.mp4
+      // লিঙ্ক থেকে শুধুমাত্র ফাইলের নাম এক্সট্র্যাক্ট করা (45639-2_480p_1788380508.mp4)
+      const fileName = data.link.split('/').pop();
+
+      // ৩. আপনার Cloudflare Worker এর ডোমেইনে কনভার্ট করা
+      const workerDomain = "https://disk.alicebearman6.workers.dev";
+      const finalStreamUrl = `${workerDomain}/video/${fileName}`;
+
+      return res.status(200).json({
+        success: true,
+        stream_url: finalStreamUrl
+      });
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'vplayer API থেকে লিঙ্ক উদ্ধার করা যায়নি' 
+      });
     }
 
-    // লিঙ্ক থেকে ID বা ফাইলের নাম বের করা
-    const cleanLink = link.trim().replace(/\/$/, "");
-    const videoId = cleanLink.split('/').pop();
-
-    if (!videoId) {
-      return res.status(400).json({ success: false, message: 'Invalid Link' });
-    }
-
-    // আপনার Cloudflare Worker URL
-    const workerDomain = "https://disk.alicebearman6.workers.dev";
-    const finalStreamUrl = `${workerDomain}/video/${videoId}`;
-
-    return res.status(200).json({
-      success: true,
+  } catch (error) {
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server Error: ' + error.message 
+    });
+  }
+};
       stream_url: finalStreamUrl
     });
 
