@@ -12,7 +12,7 @@ export default function handler(req, res) {
     const fileName = "45639-2_480p_1788380508.mp4"; 
 
     // আপনার Cloudflare Worker URL এখানে বসাবেন
-    const workerDomain = "https://my-proxy.subdomain.workers.dev";
+    const workerDomain = "https://jolly-river-5900.shadinprodhan009.workers.dev/";
     const finalStreamUrl = `${workerDomain}/video/${fileName}`;
 
     return res.status(200).json({ success: true, stream_url: finalStreamUrl });
