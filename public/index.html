@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Video Player</title>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; padding: 20px; }
+    .container { width: 100%; max-width: 650px; text-align: center; }
+    input { width: 70%; padding: 12px; border-radius: 5px; border: 1px solid #334155; outline: none; background: #1e293b; color: #fff; }
+    button { padding: 12px 18px; border-radius: 5px; border: none; background: #2563eb; color: #fff; cursor: pointer; font-weight: bold; }
+    .player-box { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Online Video Player</h2>
+    <input type="text" id="videoLink" placeholder="vdiskpro/terabox লিঙ্ক পেস্ট করুন">
+    <button onclick="playVideo()">Play</button>
+
+    <div class="player-box">
+      <video id="player" controls playsinline></video>
+    </div>
+  </div>
+
+  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+  <script>
+    const player = new Plyr('#player');
+
+    async function playVideo() {
+      const link = document.getElementById('videoLink').value;
+      if(!link) return alert('অনুগ্রহ করে একটি লিঙ্ক দিন!');
+
+      try {
+        const res = await fetch('/api/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ link })
+        });
+
+        const data = await res.json();
+        if(data.success) {
+          player.source = {
+            type: 'video',
+            sources: [{ src: data.stream_url, type: 'video/mp4' }]
+          };
+          player.play();
+        } else {
+          alert('ভিডিও প্রসেস করা সম্ভব হয়নি');
+        }
+      } catch (err) {
+        alert('Server connection error!');
+      }
+    }
+  </script>
+</body>
+</html>
