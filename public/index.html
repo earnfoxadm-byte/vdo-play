@@ -6,18 +6,24 @@
   <title>Online Video Player</title>
   <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
   <style>
-    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; padding: 20px; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; margin: 0; padding: 20px; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 650px; text-align: center; }
-    input { width: 70%; padding: 12px; border-radius: 5px; border: 1px solid #334155; outline: none; background: #1e293b; color: #fff; }
-    button { padding: 12px 18px; border-radius: 5px; border: none; background: #2563eb; color: #fff; cursor: pointer; font-weight: bold; }
-    .player-box { margin-top: 20px; }
+    .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    input { flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #fff; outline: none; }
+    button { padding: 12px 20px; border-radius: 6px; border: none; background: #2563eb; color: #fff; font-weight: bold; cursor: pointer; }
+    button:disabled { background: #64748b; }
+    .player-box { margin-top: 10px; width: 100%; }
   </style>
 </head>
 <body>
+
   <div class="container">
     <h2>Online Video Player</h2>
-    <input type="text" id="videoLink" placeholder="vdiskpro/terabox লিঙ্ক পেস্ট করুন">
-    <button onclick="playVideo()">Play</button>
+    <div class="input-group">
+      <input type="text" id="videoLink" placeholder="vdiskpro লিঙ্ক পেস্ট করুন">
+      <button id="playBtn" onclick="playVideo()">Play</button>
+    </div>
 
     <div class="player-box">
       <video id="player" controls playsinline></video>
@@ -29,11 +35,46 @@
     const player = new Plyr('#player');
 
     async function playVideo() {
-      const link = document.getElementById('videoLink').value;
-      if(!link) return alert('অনুগ্রহ করে একটি লিঙ্ক দিন!');
+      const input = document.getElementById('videoLink');
+      const btn = document.getElementById('playBtn');
+      const link = input.value.trim();
+
+      if (!link) {
+        alert('অনুগ্রহ করে একটি লিঙ্ক দিন!');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Processing...';
 
       try {
         const res = await fetch('/api/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ link: link })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          player.source = {
+            type: 'video',
+            sources: [{ src: data.stream_url, type: 'video/mp4' }]
+          };
+          player.play();
+        } else {
+          alert(data.message || 'ভিডিও পার্স করা সম্ভব হয়নি!');
+        }
+      } catch (err) {
+        alert('Server Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Play';
+      }
+    }
+  </script>
+</body>
+</html>
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ link })
