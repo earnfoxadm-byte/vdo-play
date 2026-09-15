@@ -1,39 +1,140 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Online Video Player</title>
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 650px; text-align: center; }
-    .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-    input { flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #fff; outline: none; }
-    button { padding: 12px 20px; border-radius: 6px; border: none; background: #2563eb; color: #fff; font-weight: bold; cursor: pointer; }
-    button:disabled { background: #64748b; }
-    .player-box { margin-top: 10px; width: 100%; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Video Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .player-card {
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 20px;
+            text-align: center;
+            color: #38bdf8;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            background: #0f172a;
+            color: #fff;
+            outline: none;
+            font-size: 14px;
+        }
+        input[type="text"]:focus {
+            border-color: #38bdf8;
+        }
+        button {
+            padding: 12px 20px;
+            background: #0284c7;
+            border: none;
+            color: #fff;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0369a1;
+        }
+        #status {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            min-height: 18px;
+        }
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
+<div class="player-card">
     <h2>Online Video Player</h2>
+    
     <div class="input-group">
-      <input type="text" id="videoLink" placeholder="vdiskpro লিঙ্ক পেস্ট করুন">
-      <button id="playBtn" onclick="playVideo()">Play</button>
+        <input type="text" id="videoLinkInput" placeholder="Paste link here...">
+        <button onclick="processAndPlay()">Play Video</button>
     </div>
 
-    <div class="player-box">
-      <video id="player" controls playsinline></video>
-    </div>
-  </div>
+    <div id="status"></div>
 
-  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-  <script>
-    const player = new Plyr('#player');
+    <video id="videoPlayer" controls autoplay></video>
+</div>
 
+<script>
+async function processAndPlay() {
+    const inputUrl = document.getElementById('videoLinkInput').value.trim();
+    const statusDiv = document.getElementById('status');
+    const videoPlayer = document.getElementById('videoPlayer');
+
+    if (!inputUrl) {
+        statusDiv.style.color = "#ef4444";
+        statusDiv.innerText = "Error: Link paste korun!";
+        return;
+    }
+
+    statusDiv.style.color = "#94a3b8";
+    statusDiv.innerText = "Processing, please wait...";
+    videoPlayer.style.display = "none";
+    videoPlayer.pause();
+
+    try {
+        // Vercel Serverless API ke call kora hochhe (CORS error eড়ানোর জন্য)
+        const res = await fetch(`/api/parse?url=${encodeURIComponent(inputUrl)}`);
+        const jsonRes = await res.json();
+
+        if (jsonRes.status === "success" && jsonRes.videoUrl) {
+            videoPlayer.src = jsonRes.videoUrl;
+            videoPlayer.style.display = "block";
+            videoPlayer.play();
+            
+            statusDiv.style.color = "#22c55e";
+            statusDiv.innerText = "Playing: " + jsonRes.title;
+        } else {
+            statusDiv.style.color = "#ef4444";
+            statusDiv.innerText = "Error: " + (jsonRes.message || "Video link extract kora jayni.");
+        }
+    } catch (err) {
+        console.error(err);
+        statusDiv.style.color = "#ef4444";
+        statusDiv.innerText = "Error: Server response pai ni.";
+    }
+}
+</script>
+
+</body>
+</html>
     async function playVideo() {
       const input = document.getElementById('videoLink');
       const btn = document.getElementById('playBtn');
