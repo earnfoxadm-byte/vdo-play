@@ -1,39 +1,46 @@
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
+  // CORS Headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  const { link } = req.body || {};
-
-  if (!link) {
-    return res.status(400).json({ success: false, message: 'Link missing' });
+    res.status(200).end();
+    return;
   }
 
   try {
-    // ১. VDiskPro লিঙ্ক থেকে সরাসরি ID/Path বের করার লজিক
-    // উদাহরণ: https://vdiskpro.com/yXKZWWBUkB3cs3KKpsNlR29cd -> ID বের করা
-    const linkParts = link.trim().split('/');
-    const videoId = linkParts[linkParts.length - 1] || linkParts[linkParts.length - 2];
+    const { link } = req.body || {};
 
-    if (!videoId) {
-      return res.status(400).json({ success: false, message: 'Invalid Link Format' });
+    if (!link) {
+      return res.status(400).json({ success: false, message: 'Link missing' });
     }
 
-    // ২. লিঙ্ক প্রসেস করে আপনার Cloudflare Worker-এ পাঠানো
-    // (নোট: আপনার Cloudflare Worker URL এখানে সঠিকভাবে আপডেট করুন)
-    const workerDomain = "https://disk.alicebearman6.workers.dev"; 
-    
-    // ফাইল ফরম্যাট তৈরি
+    // লিঙ্ক থেকে ID বা ফাইলের নাম বের করা
+    const cleanLink = link.trim().replace(/\/$/, "");
+    const videoId = cleanLink.split('/').pop();
+
+    if (!videoId) {
+      return res.status(400).json({ success: false, message: 'Invalid Link' });
+    }
+
+    // আপনার Cloudflare Worker URL
+    const workerDomain = "https://disk.alicebearman6.workers.dev";
     const finalStreamUrl = `${workerDomain}/video/${videoId}`;
 
     return res.status(200).json({
       success: true,
       stream_url: finalStreamUrl
     });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
 
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Server Error' });
