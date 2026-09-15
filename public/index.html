@@ -105,6 +105,158 @@
 <!-- Plyr JS -->
 <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
 <script>
+    // Initialize Plyr Player with Skip/Rewind Controls
+    const player = new Plyr('#player', {
+        controls: [
+            'play-large', 
+            'rewind',       // 10 sec Back
+            'play', 
+            'fast-forward', // 10 sec Skip
+            'progress',     // Timeline drag bar
+            'current-time', 
+            'duration', 
+            'mute', 
+            'volume', 
+            'settings', 
+            'pip', 
+            'fullscreen'
+        ],
+        seekTime: 10, // Skip to 10 seconds forward/back
+        keyboard: { focused: true, global: true } // Keyboard Left/Right Arrow key skip enable
+    });
+
+    async function playVideo() {
+        const input = document.getElementById('videoLink');
+        const btn = document.getElementById('playBtn');
+        const status = document.getElementById('status');
+        const link = input.value.trim();
+
+        if (!link) {
+            status.style.color = '#ef4444';
+            status.innerText = 'অনুগ্রহ করে একটি লিঙ্ক দিন!';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'Processing...';
+        status.style.color = '#38bdf8';
+        status.innerText = 'ভিডিও প্রসেস করা হচ্ছে...';
+
+        try {
+            const res = await fetch('/api/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ link: link })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                status.style.color = '#22c55e';
+                status.innerText = 'Playing: ' + data.title;
+
+                player.source = {
+                    type: 'video',
+                    title: data.title,
+                    sources: [
+                        {
+                            src: data.stream_url,
+                            type: 'video/mp4'
+                        }
+                    ]
+                };
+
+                player.play();
+            } else {
+                status.style.color = '#ef4444';
+                status.innerText = 'Error: ' + (data.message || 'ভিডিও পার্স করা সম্ভব হয়নি');
+            }
+        } catch (err) {
+            console.error(err);
+            status.style.color = '#ef4444';
+            status.innerText = 'Server Error: ' + err.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Play Video';
+        }
+    }
+</script>
+
+</body>
+</html>
+            font-size: 22px;
+        }
+        .input-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #38bdf8;
+        }
+        button {
+            padding: 12px 20px;
+            background: #0284c7;
+            border: none;
+            color: #fff;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #0369a1;
+        }
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+        #status {
+            font-size: 14px;
+            margin-bottom: 15px;
+            min-height: 20px;
+            text-align: center;
+        }
+        .player-wrapper {
+            margin-top: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Online Video Player</h2>
+
+    <div class="input-box">
+        <input type="text" id="videoLink" placeholder="Paste link here (e.g. https://pdiskvideo.in/1Z8zlOerSQc73XeFNOcLGn)">
+        <button id="playBtn" onclick="playVideo()">Play Video</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="player-wrapper">
+        <video id="player" controls playsinline></video>
+    </div>
+</div>
+
+<!-- Plyr JS -->
+<script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+<script>
     // Initialize Plyr Video Player
     const player = new Plyr('#player', {
         controls: ['play-large', 'play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen']
